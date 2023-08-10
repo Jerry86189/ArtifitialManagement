@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <!--    <link rel="stylesheet" href="register.css">-->
+    <style type="text/css">
+        /* 定义页面整体样式 */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* 定义注册表单容器样式 */
+        #register {
+            max-width: 400px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 定义标题样式 */
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* 定义表单元素样式 */
+        label {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        select:focus {
+            border-color: #3498db;
+        }
+
+        /* 定义密码可见切换按钮样式 */
+        .password-toggle {
+            position: relative;
+        }
+
+        .password-toggle input {
+            padding-right: 30px;
+        }
+
+        .password-toggle .toggle-button {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            cursor: pointer;
+            border: none;
+            background: none;
+        }
+
+        /* 定义注册按钮样式 */
+        button[type="submit"] {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #2980b9;
+        }
+
+        /* 定义底部链接样式 */
+        p {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        p a {
+            color: #3498db;
+        }
+
+        p a:hover {
+            text-decoration: underline;
+        }
+        .password-toggle {
+            position: relative;
+            display: flex; /* 添加此行以使按钮与输入框水平对齐 */
+            align-items: center; /* 添加此行以使按钮与输入框垂直对齐 */
+        }
+
+        .password-toggle input {
+            padding-right: 30px;
+        }
+
+        .password-toggle .toggle-button {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            cursor: pointer;
+            border: none;
+            background: none;
+        }
+        input[type="text"],
+        input[type="password"],
+        select {
+            width: 100%; /* 添加此行以设置宽度为100% */
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box; /* 添加此行 */
+        }
+        button[type="submit"] {
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+<div id="register">
+    <h1>注册</h1>
+    <form @submit.prevent="submitForm">
+        <label>用户名:</label>
+        <input type="text" v-model="form.username" required><br>
+        <label>密码:</label>
+        <div class="password-toggle">
+            <input :type="passwordVisible ? 'text' : 'password'" v-model="form.password" required>
+            <button class="toggle-button" type="button" @click="passwordVisible = !passwordVisible">
+                <i class="eye-icon">&#128065;</i>
+            </button>
+        </div>
+        <br>
+
+        <label>确认密码:</label>
+        <div class="password-toggle">
+            <input :type="confirmPasswordVisible ? 'text' : 'password'" v-model="form.confirmPassword" required>
+            <button class="toggle-button" type="button" @click="confirmPasswordVisible = !confirmPasswordVisible">
+                <i class="eye-icon">&#128065;</i>
+            </button>
+        </div>
+        <br>
+
+        <label>用户类型:</label>
+        <select v-model="form.userType">
+            <option value="normal" >普通用户</option>
+            <option value="admin">管理员</option>
+        </select><br>
+
+        <div v-if="form.userType === 'admin'">
+            <label>其他管理员用户名:</label>
+            <input type="text" v-model="form.otherAdminUsername" required><br>
+            <label>其他管理员密码:</label>
+            <input type="password" v-model="form.otherAdminPassword" required>
+            <button class="toggle-button" type="button" @click="otherAdminPasswordVisible = !otherAdminPasswordVisible">
+                <i class="eye-icon">&#128065;</i>
+            </button>
+            <br>
+        </div>
+
+        <button type="submit">注册</button>
+    </form>
+
+    <p>已经有账号了？<a href="login.html">点击这里登录</a></p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<script>
+    new Vue({
+        el: '#register',
+        data() {
+            return {
+                form: {
+                    username: '',
+                    password: '',
+                    confirmPassword: '',
+                    role: 'NORM',
+                    userType: 'normal',
+                    otherAdminUsername: '',
+                    otherAdminPassword: ''
+                },
+                passwordVisible: false,
+                confirmPasswordVisible: false,
+                otherAdminPasswordVisible: false
+            };
+        },
+        methods: {
+            submitForm() {
+                if (!this.form.username || !this.form.password || !this.form.confirmPassword) {
+                    // 用户名、密码或确认密码为空，显示错误信息
+                    alert('请填写所有必填字段');
+                    return;
+                }
+
+                if (this.form.password.length < 6) {
+                    // 密码长度小于6位，显示错误信息
+                    alert('密码长度不能少于6位');
+                    return;
+                }
+
+                if (this.form.password !== this.form.confirmPassword) {
+                    // 密码和确认密码不一致，显示错误信息
+                    alert('密码和确认密码不一致');
+                    return;
+                }
+
+                if (this.form.role === 'ADMIN' && (!this.form.otherAdminUsername || !this.form.otherAdminPassword)) {
+                    // 用户类型为管理员，但其他管理员用户名或密码为空，显示错误信息
+                    alert('请填写其他管理员用户名和密码');
+                    return;
+                }
+
+                const newUser = {
+                    username: this.form.username,
+                    password: this.form.password,
+                    role: this.form.role
+                    // 根据需要设置 User 对象的其他属性
+                    // 例如：role, email, 等等
+                };
+
+                const registerRequest = {
+                    newUser: newUser,
+                    otherAdminUsername: this.form.otherAdminUsername,
+                    otherAdminPassword: this.form.otherAdminPassword
+                };
+
+                axios.post('/users/register', registerRequest, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                    .then(response => {
+                        this.$message.success('Registration successful!');
+                        window.location.href = '/login.html';
+                    }).catch(error => {
+                        let errorMessage = error.response && error.response.data ? error.response.data : "Unknown error occurred";
+                        this.$message.error(errorMessage);
+                    });
+            }
+        }
+    });
+</script>
+</body>
+</html>

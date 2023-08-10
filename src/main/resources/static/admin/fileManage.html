@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>文件管理</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+</head>
+<body>
+<div id="fileManage">
+    <el-button @click="goToAdmin">返回管理员首页</el-button>
+    <div>
+        <el-input placeholder="请输入文件ID" v-model="idQuery"
+                  :rules="{ pattern: /^[0-9]*$/, message: '请输入数字' }" @input="checkId"></el-input>
+        <el-input placeholder="请输入文件名" v-model="nameQuery"
+                  :rules="{ pattern: /^[^\s]*$/, message: '不能包含空格' }" @input="checkName"></el-input>
+        <el-button type="primary" @click="searchFile">搜索</el-button>
+        <el-button @click="resetSearch">刷新</el-button>
+        <el-button type="danger" @click="toggleDeleteMode">{{deleteMode ? '取消删除' : '选择删除'}}</el-button>
+        <el-button type="success" v-if="deleteMode" @click="deleteFiles">确认删除</el-button>
+    </div>
+
+    <el-table :data="files" style="width: 100%" v-loading="loading">
+        <el-table-column type="selection" v-if="deleteMode" @select="handleSelect"
+                         @select-all="handleSelectAll"></el-table-column>
+        <el-table-column prop="fileId" label="文件ID"></el-table-column>
+        <el-table-column prop="uploaderId" label="上传者ID"></el-table-column>
+        <el-table-column prop="fileName" label="文件名"></el-table-column>
+        <el-table-column prop="uploadTimestamp" label="上传时间戳">
+            <template slot-scope="scope">{{ scope.row.uploadTimestamp | formatDate }}</template>
+        </el-table-column>
+        <el-table-column prop="fileSize" label="文件大小"></el-table-column>
+        <el-table-column label="操作">
+            <template slot-scope="scope">
+                <el-button @click="describeFile(scope.row.fileId)">描述</el-button>
+                <el-button type="danger" v-if="!deleteMode" @click="deleteSingleFile(scope.row.fileId)">删除</el-button>
+            </template>
+        </el-table-column>
+    </el-table>
+
+    <el-pagination @size-change="handleSizeChange" @current-change="handleCurrentChange" :current-page="currentPage"
+                   :page-size="pageSize" layout="total, prev, pager, next, jumper" :total="totalCount">
+    </el-pagination>
+
+    <el-dialog
+            title="File Description"
+            :visible.sync="fileDialogVisible"
+            width="50%"
+            :before-close="handleClose">
+        <pre>{{ fileDescription }}</pre>
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="fileDialogVisible = false">Close</el-button>
+        </span>
+    </el-dialog>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<script>
+    new Vue({
+        el: '#fileManage',
+        data() {
+            return {
+                files: [],
+                currentPage: 1,
+                pageSize: 30,
+                totalCount: 0,
+                loading: false,
+                idQuery: "",
+                nameQuery: "",
+                deleteMode: false,
+                selectedFiles: [],
+                fileDialogVisible: false,
+                fileDescription: null
+            };
+        },
+        methods: {
+            fetchFiles() {
+                this.loading = true;
+                axios.get('/files/both/get_all_files', {
+                    params: {
+                        pageNum: this.currentPage,
+                        pageSize: this.pageSize
+                    }
+                }).then(response => {
+                    this.files = response.data.fileInfos;
+                    this.totalCount = response.data.totalCount;
+                    this.loading = false;
+                }).catch(error => {
+                    let errorMessage = error.response && error.response.data ? error.response.data : "Unknown error occurred";
+                    this.$message.error(errorMessage);
+                    this.loading = false;
+                });
+            },
+            searchFile() {
+                if (this.idQuery !== "") {
+                    this.searchFileById();
+                } else if (this.nameQuery !== "") {
+                    this.searchFileByName();
+                } else {
+                    alert("请输入搜索条件");
+                }
+            },
+            searchFileById() {
+                this.loading = true;
+                axios.get(`/both/get_file_by_id/${this.idQuery}`).then(response => {
+                    this.files = [response.data];
+                    this.totalCount = 1;
+                    this.loading = false;
+                }).catch(error => {
+                    let errorMessage = error.response && error.response.data ? error.response.data : "Unknown error occurred";
+                    this.$message.error(errorMessage);
+                    this.loading = false;
+                });
+            },
+            searchFileByName() {
+                this.loading = true;
+                axios.get(`/both/get_file_by_name/${this.nameQuery}`, {
+                    params: {
+                        pageNum: this.currentPage,
+                        pageSize: this.pageSize
+                    }
+                }).then(response => {
+                    this.files = response.data.fileInfos;
+                    this.totalCount = response.data.totalCount;
+                    this.loading = false;
+                }).catch(error => {
+                    let errorMessage = error.response && error.response.data ? error.response.data : "Unknown error occurred";
+                    this.$message.error(errorMessage);
+                    this.loading = false;
+                });
+            },
+            handleSizeChange(val) {
+                this.pageSize = val;
+                this.fetchFiles();
+            },
+            handleCurrentChange(val) {
+                this.currentPage = val;
+                this.fetchFiles();
+            },
+            toggleDeleteMode() {
+                this.deleteMode = !this.deleteMode;
+                if (!this.deleteMode) {
+                    this.selectedFiles = [];
+                }
+            },
+            handleSelect(selection, row) {
+                this.selectedFiles = selection.map(item => item.fileId);
+            },
+            handleSelectAll(selection) {
+                this.selectedFiles = selection.map(item => item.fileId);
+            },
+            deleteFiles() {
+                if (this.selectedFiles.length === 0) {
+                    alert("请选择要删除的文件");
+                    return;
+                }
+
+                this.loading = true;
+                let userId = JSON.parse(localStorage.getItem('user')).value.id;
+                axios.post('/both/delete_files', {
+                    userId: userId,
+                    fileIds: this.selectedFiles
+                }).then(response => {
+                    this.$message.success("文件已成功删除");
+                    this.selectedFiles = [];
+                    this.deleteMode = false;
+                    this.fetchFiles();
+                    this.loading = false;
+                }).catch(error => {
+                    let errorMessage = error.response && error.response.data ? error.response.data : "Unknown error occurred";
+                    this.$message.error(errorMessage);
+                    this.loading = false;
+                });
+            },
+            goToAdmin() {
+                window.location.href = 'admin.html';
+            },
+            resetSearch() {
+                this.idQuery = "";
+                this.nameQuery = "";
+                this.fetchFiles();
+            },
+            deleteSingleFile(fileId) {
+                // 在这里添加删除单个文件的代码
+                this.selectedFiles = [fileId]
+                this.deleteFiles()
+            },
+            describeFile(fileId) {
+                axios.get(`/trains/both/describe_file/${fileId}`).then(response => {
+                    let str = response.data;
+                    console.log("lounhhmjghn")
+                    console.log(str)
+                    let result;
+                    if (typeof str === 'string') {
+                        // str = JSON.stringify(str)
+                        if (/[\u0000-\u001F]/.test(str)) {
+                            console.log('String contains control characters');
+                            str = str.replace(/[\u0000-\u001F]/g, '');
+                            str = str.replace(/\bNaN\b/g, 'null');
+                            // console.log(str)
+                            console.log("str")
+                        }
+                        console.log(str)
+                        try {
+                            let data = JSON.parse(str); // 将 response.data 从字符串转换为对象
+                            result = data.result;
+                            // console.log(result);
+                        } catch (e) {
+                            // 如果解析失败，抛出错误
+                            console.error('Failed to parse result:', e);
+                            this.$message.error('Failed to parse result');
+                            // console.log(response)
+                            return;
+                        }
+                    }
+                    else {
+                        str = JSON.stringify(str)
+                        if (/[\u0000-\u001F]/.test(str)) {
+                            console.log('String contains control characters');
+                            str = str.replace(/[\u0000-\u001F]/g, '');
+                            str = str.replace(/\bNaN\b/g, 'null');
+                            // console.log(str)
+                            console.log("str")
+                        }
+                        console.log(str)
+                        try {
+                            let data = JSON.parse(str); // 将 response.data 从字符串转换为对象
+                            result = data.result;
+                            // console.log(result);
+                        } catch (e) {
+                            // 如果解析失败，抛出错误
+                            console.error('Failed to parse result:', e);
+                            this.$message.error('Failed to parse result');
+                            // console.log(response)
+                            return;
+                        }
+                    }
+
+
+
+                    let formattedMessage = `File Description\n`;
+
+                    formattedMessage += `column_names: ${result.column_names.join(', ')}\n`;
+
+                    formattedMessage += `info: ${JSON.stringify(result.info, null, 2)}\n`;
+
+                    formattedMessage += `describe: ${JSON.stringify(result.describe, null, 2)}\n`;
+
+                    this.fileDescription = formattedMessage;
+                    this.fileDialogVisible = true;
+                }).catch(error => {
+                    if (error.response) {
+                        console.log(error.response);
+                    } else {
+                        console.log(error);
+                    }
+                });
+            }
+        },
+        mounted() {
+            this.fetchFiles();
+        },
+        filters: {
+            formatDate(value) {
+                let date = new Date(value);
+                let year = date.getFullYear();
+                let month = date.getMonth() + 1;
+                let day = date.getDate();
+                let hour = date.getHours();
+                let min = date.getMinutes();
+                let sec = date.getSeconds();
+                return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+            }
+        }
+    });
+</script>
+
+</body>
+</html>

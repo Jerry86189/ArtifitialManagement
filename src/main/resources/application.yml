@@ -1,0 +1,36 @@
+spring:
+  web:
+    resources:
+      static-locations: classpath:/static/
+  datasource:
+    url: jdbc:mysql://localhost:3306/artificial_train?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: GJSE8YqDww
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.jerry86189.artifitialmanagement.entity
+
+logging:
+  level:
+    mybatis: DEBUG
+    org:
+      springframework:
+        web: DEBUG
+
+server:
+  port: 8888
+  ssl:
+    key-store: classpath:keystore.p12
+    key-store-type: PKCS12
+    key-store-password: GJSE8YqDww
+    key-alias: myalias
+
+app:
+  file:
+    upload-dir: C:/my_upload_dir/

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<div class="sidebar">
+    <el-menu default-active="1" class="el-menu-vertical-demo" @select="handleSelect">
+        <el-menu-item index="1" @click="showUpdateDialog = true">
+            <i class="el-icon-edit"></i>
+            <span slot="title">更新信息</span>
+        </el-menu-item>
+        <el-menu-item index="3" @click="navigate('training.html')">
+            <i class="el-icon-video-play"></i>
+            <span slot="title">训练</span>
+        </el-menu-item>
+        <el-menu-item index="4" @click="navigate('history.html')">
+            <i class="el-icon-tickets"></i>
+            <span slot="title">训练历史</span>
+        </el-menu-item>
+        <el-menu-item index="2" @click="logout">
+            <i class="el-icon-switch-button"></i>
+            <span slot="title">登出</span>
+        </el-menu-item>
+    </el-menu>
+</div>
+<script>
+    new Vue({
+        el: '#norm',
+        data: {
+            user: {
+                id: '',
+                username: '',
+                password: '',
+                role: ''
+            },
+            showUpdateDialog: false,
+            updateForm: {
+                newUsername: '',
+                newPassword: '',
+                verifyPassword: ''
+            }
+        },
+methods: {
+    navigate(page) {
+        window.location.href = page;
+    }
+
+},
+        created() {
+            let token = JSON.parse(localStorage.getItem('token'));
+            if (!token || new Date().getTime() > token.expires) {
+                window.location.href = '/login.html';
+            }
+        }
+    });
+</script>
+</body>
+</html>

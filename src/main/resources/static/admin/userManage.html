@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>用户管理</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+</head>
+<body>
+<div id="userManage">
+    <el-button @click="goToAdmin">返回管理员首页</el-button>
+    <div>
+        <el-input placeholder="请输入ID" v-model="idQuery"
+                  :rules="{ pattern: /^[0-9]*$/, message: '请输入数字' }" @input="checkId"></el-input>
+        <el-input placeholder="请输入用户名" v-model="usernameQuery"
+                  :rules="{ pattern: /^[^\s]*$/, message: '不能包含空格' }" @input="checkUsername"></el-input>
+        <el-button type="primary" @click="searchUser">搜索</el-button>
+        <el-button @click="resetSearch">刷新</el-button>
+    </div>
+
+    <el-table :data="users" style="width: 100%" v-loading="loading">
+        <el-table-column prop="id" label="用户ID"></el-table-column>
+        <el-table-column prop="username" label="用户名"></el-table-column>
+        <el-table-column label="密码">
+            <template slot-scope="scope">
+                ******
+            </template>
+        </el-table-column>
+        <el-table-column label="操作">
+            <template slot-scope="scope">
+                <el-button>编辑</el-button>
+                <el-button>删除</el-button>
+            </template>
+        </el-table-column>
+    </el-table>
+
+    <el-pagination @size-change="handleSizeChange" @current-change="handleCurrentChange" :current-page="currentPage"
+                   :page-size="pageSize" layout="total, prev, pager, next, jumper" :total="totalCount">
+    </el-pagination>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<script>
+    new Vue({
+        el: '#userManage',
+        data() {
+            return {
+                users: [],
+                currentPage: 1,
+                pageSize: 30,
+                totalCount: 0,
+                loading: false,
+                idQuery: "",
+                usernameQuery: ""
+            };
+        },
+        methods: {
+            fetchUsers() {
+                this.loading = true;
+                axios.get('/users/admin/get_all_norm_account', {
+                    params: {
+                        pageNum: this.currentPage,
+                        pageSize: this.pageSize
+                    }
+                }).then(response => {
+                    this.users = response.data.users;
+                    this.totalCount = response.data.totalCount;
+                    this.loading = false;
+                }).catch(error => {
+                    let errorMessage = error.response && error.response.data ? error.response.data : "Unknown error occurred";
+                    this.$message.error(errorMessage);
+                });
+            },
+            searchUser() {
+                if (this.idQuery === "" && this.usernameQuery === "") {
+                    alert("请输入搜索条件");
+                    return;
+                }
+
+                this.loading = true;
+
+                if (this.idQuery !== "") {
+                    axios.get(`/users/admin/get_by_id/${this.idQuery}`).then(response => {
+                        this.users = [response.data];
+                        this.totalCount = 1;
+                        this.loading = false;
+                    }).catch(error => {
+                        let errorMessage = error.response && error.response.data ? error.response.data : "Unknown error occurred";
+                        this.$message.error(errorMessage);
+                    });
+                } else if (this.usernameQuery !== "") {
+                    axios.get(`/users/admin/get_by_username/${this.usernameQuery}`, {
+                        params: {
+                            pageNum: this.currentPage,
+                            pageSize: this.pageSize
+                        }
+                    }).then(response => {
+                        this.users = response.data.users;
+                        this.totalCount = response.data.totalCount;
+                        this.loading = false;
+                    }).catch(error => {
+                        let errorMessage = error.response && error.response.data ? error.response.data : "Unknown error occurred";
+                        this.$message.error(errorMessage);
+                    });
+                }
+            },
+            handleSizeChange(val) {
+                this.pageSize = val;
+                this.fetchUsers();
+            },
+            handleCurrentChange(val) {
+                this.currentPage = val;
+                this.fetchUsers();
+            },
+            checkId() {
+                if (!/^[0-9]*$/.test(this.idQuery)) {
+                    alert("ID应该是数字");
+                    this.idQuery = "";
+                } else if (this.usernameQuery) {
+                    alert("只能二选一填一个框");
+                    this.idQuery = "";
+                }
+            },
+            checkUsername() {
+                if (!/^[^\s]*$/.test(this.usernameQuery)) {
+                    alert("用户名不能包含空格");
+                    this.usernameQuery = "";
+                } else if (this.idQuery) {
+                    alert("只能二选一填一个框");
+                    this.usernameQuery = "";
+                }
+            },
+            goToAdmin() {
+                window.location.href = 'admin.html';
+            },
+            resetSearch() {
+                this.idQuery = "";
+                this.usernameQuery = "";
+                this.fetchUsers();
+            }
+        },
+        created() {
+            this.fetchUsers();
+        }
+    })
+</script>
+</body>
+</html>

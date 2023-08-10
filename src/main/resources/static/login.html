@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录</title>
+    <!--    <link rel="stylesheet" href="login.css">-->
+    <style type="text/css">
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f1f1f1;
+        }
+
+        #login {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 3px;
+            border: 1px solid #ccc;
+            width: 100%;
+        }
+
+        .password-toggle {
+            position: relative;
+        }
+
+        .password-toggle input {
+            padding-right: 30px;
+        }
+
+        .password-toggle .toggle-button {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            cursor: pointer;
+            border: none;
+            background: none;
+        }
+
+        button[type="submit"] {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        p {
+            text-align: center;
+            margin-top: 10px;
+        }
+        a {
+            color: #3498db;
+        }
+        .password-toggle .toggle-button {
+            position: absolute;
+            top: 40%;
+            right: 5px;
+            transform: translateY(-50%);
+            cursor: pointer;
+            border: none;
+            background: none;
+        }
+
+    </style>
+</head>
+<body>
+<div id="login">
+    <h1>登录</h1>
+    <form @submit.prevent="onSubmit">
+        <label for="username">用户名:</label>
+        <input type="text" id="username" v-model="username" required><br>
+        <label for="password">密码:</label>
+        <div class="password-toggle">
+            <input :type="passwordFieldType" id="password" v-model="password" required>
+            <button class="toggle-button" type="button" @click="togglePasswordVisibility">
+                <i :class="eyeIconClass">&#128065;</i>
+            </button>
+        </div>
+        <br>
+        <button type="submit">登录</button>
+    </form>
+    <p>还没有账号？<a href="register.html">点击这里注册</a></p>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script>
+    new Vue({
+        el: '#login',
+        data: {
+            username: '',
+            password: '',
+            passwordFieldType: 'password'
+        },
+        computed: {
+            eyeIconClass() {
+                return this.passwordFieldType === 'password' ? 'eye-icon-closed' : 'eye-icon';
+            }
+        },
+        methods: {
+            togglePasswordVisibility() {
+                this.passwordFieldType = this.passwordFieldType === 'password' ? 'text' : 'password';
+            },
+            onSubmit() {
+                if (this.password.length < 6) {
+                    alert('密码长度不能少于6位');
+                    return;
+                }
+
+                axios.post('/users/login', {
+                    username: this.username,
+                    password: this.password
+                }, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }).then(response => {
+                    let expirationDate = new Date().getTime() + 1000 * 60 * 60 * 24; // 1 day later
+                    localStorage.setItem('token', JSON.stringify({
+                        value: response.data.token,
+                        expires: expirationDate
+                    }));
+                    localStorage.setItem('user', JSON.stringify({
+                        value: response.data.user, // Saving the entire user object
+                        expires: expirationDate
+                    }));
+
+                    // Checking the role of the user
+                    if (response.data.user.role === 'ADMIN') {
+                        window.location.href = '/admin/admin.html';
+                    } else {
+                        window.location.href = '/norm/norm.html';
+                    }
+                }).catch(error => {
+                    let errorMessage;
+                    if (error.response && error.response.data) {
+                        errorMessage = error.response.data.message || error.response.data.error || JSON.stringify(error.response.data);
+                    } else {
+                        errorMessage = "Unknown error occurred";
+                    }
+                    alert(errorMessage);
+                });
+            }
+        }
+    });
+</script>
+</body>
+</html>

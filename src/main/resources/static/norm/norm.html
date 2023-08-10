@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>管理员</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <style>
+
+
+        .container {
+            display: flex;
+        }
+
+        .sidebar {
+            width: 200px;
+            height: 100vh;
+            background-color: #f5f7fa;
+        }
+
+        .main {
+            flex-grow: 1;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+<div id="norm">
+    <div class="container">
+        <div class="sidebar">
+            <el-menu default-active="1" class="el-menu-vertical-demo" @select="handleSelect">
+                <el-menu-item index="1" @click="showUpdateDialog = true">
+                    <i class="el-icon-edit"></i>
+                    <span slot="title">更新信息</span>
+                </el-menu-item>
+                <el-menu-item index="3" @click="navigate('training.html')">
+                    <i class="el-icon-video-play"></i>
+                    <span slot="title">训练</span>
+                </el-menu-item>
+                <el-menu-item index="4" @click="navigate('history.html')">
+                    <i class="el-icon-tickets"></i>
+                    <span slot="title">训练历史</span>
+                </el-menu-item>
+                <el-menu-item index="2" @click="logout">
+                    <i class="el-icon-switch-button"></i>
+                    <span slot="title">登出</span>
+                </el-menu-item>
+            </el-menu>
+        </div>
+        <div class="main">
+            <h1>{{ user.username }}</h1>
+            <p>用户ID：{{ user.id }}</p>
+            <p>密码：******</p>
+            <p>角色：{{ user.role }}</p>
+        </div>
+    </div>
+
+    <el-dialog :visible.sync="showUpdateDialog" title="更新信息">
+        <el-input v-model="updateForm.newUsername" placeholder="新用户名"></el-input>
+        <el-input v-model="updateForm.newPassword" type="password" placeholder="新密码" :show-password="true"></el-input>
+        <el-input v-model="updateForm.verifyPassword" type="password" placeholder="验证密码" :show-password="true"></el-input>
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="cancelUpdate">取消</el-button>
+            <el-button type="primary" @click="update">确认</el-button>
+        </span>
+    </el-dialog>
+</div>
+<script>
+    new Vue({
+        el: '#norm',
+        data: {
+            user: {
+                id: '',
+                username: '',
+                password: '',
+                role: ''
+            },
+            showUpdateDialog: false,
+            updateForm: {
+                newUsername: '',
+                newPassword: '',
+                verifyPassword: ''
+            }
+        },
+        mounted() {
+            let userObj = JSON.parse(localStorage.getItem('user'));
+            if(userObj && new Date().getTime() < userObj.expires) {
+                this.user = userObj.value;
+            } else {
+                window.location.href = "/login.html";
+            }
+        },
+        methods: {
+            logout() {
+                localStorage.removeItem('user');
+                localStorage.removeItem('token');
+                window.location.href = "/login.html";
+            },
+            update() {
+                // 检查是否所有输入框都已填入信息
+                if (!this.updateForm.newUsername || !this.updateForm.newPassword || !this.updateForm.verifyPassword) {
+                    this.$message.warning("Please fill in all information");
+                    return;
+                }
+
+                // // 检查输入的密码和确认密码是否相同
+                // if (this.updateForm.newPassword !== this.updateForm.verifyPassword) {
+                //     this.$message.warning("The password and the confirmation password do not match");
+                //     return;
+                // }
+
+                let updateRequest = {
+                    id: this.user.id,
+                    newUsername: this.updateForm.newUsername,
+                    newPassword: this.updateForm.newPassword,
+                    verifyPassword: this.updateForm.verifyPassword
+                };
+
+                axios.put('/users/both/update_self_account', updateRequest)
+                    .then(response => {
+                        this.user = response.data;
+                        this.saveUserToLocal(this.user);
+                        this.showUpdateDialog = false;
+                    })
+                    .catch(error => {
+                        // 判断错误信息是否存在，如果存在就显示错误信息，否则显示默认的错误信息
+                        let errorMessage = error.response && error.response.data ? error.response.data : "Unknown error occurred";
+                        this.$message.error(errorMessage);
+                    });
+            },
+            cancelUpdate() {
+                this.showUpdateDialog = false;
+                this.updateForm.newUsername = '';
+                this.updateForm.newPassword = '';
+                this.updateForm.verifyPassword = '';
+            },
+            navigate(page) {
+                window.location.href = page;
+            }
+        },
+        created() {
+            let token = JSON.parse(localStorage.getItem('token'));
+            if (!token || new Date().getTime() > token.expires) {
+                window.location.href = '/login.html';
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
